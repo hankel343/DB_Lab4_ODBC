@@ -1,0 +1,4 @@
+﻿  Main.cpp
+C:\Users\hanke\Documents\VS_Projects\Databases\SQLConnection\SQLConnection\Main.cpp(36,21): warning C4018: '<': signed/unsigned mismatch
+C:\Users\hanke\Documents\VS_Projects\Databases\SQLConnection\SQLConnection\Main.cpp(41,21): warning C4018: '<': signed/unsigned mismatch
+  SQLConnection.vcxproj -> C:\Users\hanke\Documents\VS_Projects\Databases\SQLConnection\Debug\SQLConnection.exe
