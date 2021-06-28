@@ -1,4 +1,5 @@
 #include <iostream>
+#include <string>
 #include <Windows.h>
 #include <sqlext.h>
 #include <sqltypes.h>
@@ -30,15 +31,11 @@ int main()
 	SQLHANDLE sqlStmtHandle = NULL;	// Statement handle
 	SQLHANDLE sqlEnvHandle = NULL;		// Environment handle
 	std::string connStr = "Driver={SQL Server};SERVER=localhost, 1433, DATABASE=Lab3;Trusted=true;";
-	std::string query = "select * from Lab3.dbo.GradStudents";
-	
+	std::string query{ "" };
 	SQLWCHAR* sqlConnStr = new SQLWCHAR[connStr.length()];
-	for (int i{ 0 }; i < connStr.length(); i++) { sqlConnStr[i] = (SQLWCHAR)connStr[i];} //Casting each char in string to a SQLWCHAR
-
+	for (int i{ 0 }; i < connStr.length(); i++) { sqlConnStr[i] = (SQLWCHAR)connStr[i]; } //Casting each char in string to a SQLWCHAR
 	SQLWCHAR* retconstring = new SQLWCHAR[SQL_MSG_LEN];
-
-	SQLWCHAR* sqlQuery = new SQLWCHAR[query.length()];
-	for (int i{ 0 }; i < query.length()+1; i++) {sqlQuery[i] = query[i];}
+	SQLWCHAR* sqlQuery;
 
 	if (!EnvConnIni(sqlEnvHandle, sqlconnhandle))			// Initialize environment and connection handles.
 	{
@@ -52,7 +49,16 @@ int main()
 		return ProgramCompleteWithErrors;
 	}
 
-	CompleteQuery(sqlStmtHandle, sqlQuery);
+	do {
+		cout << "Enter your query (or type 'exit' to quit): ";
+		std::getline(std::cin, query);
+		sqlQuery = new SQLWCHAR[query.length()];
+		for (int i{ 0 }; i < query.length()+1; i++) { sqlQuery[i] = query[i]; }
+
+		if (query != "exit") {
+			CompleteQuery(sqlStmtHandle, sqlQuery);
+		}
+	} while (query != "exit");
 
 	FreeAndDisconnect(sqlStmtHandle, sqlconnhandle);
 	delete[] sqlConnStr, retconstring, sqlQuery;
