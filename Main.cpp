@@ -1,3 +1,9 @@
+/*	Hankel Haldin
+*	Databases Lab 4: ODBC
+*	Due: 7/1/2021
+*	Create an external interface for the database based on your design from lab 2 and 3.
+*/
+
 #include <iostream>
 #include <string>
 #include <Windows.h>
@@ -12,18 +18,48 @@ using namespace std;
 #define ProgramCompleteWithErrors 1
 enum Tables { STUDENT, PROFESSOR, DEPARTMENT, PROJECT };
 
+//Pre: A buffer has been allocated for the handle argument
+//Post: A sql error message is presented to the user.
 void showSQLError(unsigned int handleType, const SQLHANDLE& handle);
+
+//Pre: Environment and connection handle buffers have been declared.
+//Post: The environment and connection handle buffers have been allocated the appropriate sql handles.
 bool EnvConnIni(SQLHANDLE& EnvHandle, SQLHANDLE& ConnHandle);
+
+//Pre: SQL statement and connection handles have been allocated.
+//Post: Memory for statement and connection handles has been deallocated.
 void FreeAndDisconnect(SQLHANDLE StmtHandle, SQLHANDLE ConnHandle);
+
+//Pre: A connection handle has been allocated and connection strings specifing the path to a SQL server have been initialized.
+//Post: A connection to a SQL server has been established.
 bool ConnectToServer(SQLHANDLE ConnHandle, SQLHANDLE& StmtHandle, SQLWCHAR* ConnStr, SQLWCHAR* RetConnStr);
 
+//Pre: none
+//Post: Database table selection menu is presented to the screen.
 void DisplayTables();
+
+//Pre: tableSelection parameter has been initialized.
+//Post: The appropriate database table is selected.
 Tables ProcessTableSelection(char tableSelection);
+
+//Pre: none.
+//Post: User input query string is converted to a string of SQLWCHARs.
 SQLWCHAR* ReadAndConvertQuery();
 
+//Pre: Memory has been allocated for a SQL statement handle and a query represented by a string of SQLWCHARs has been initialized.
+//Post: The result set for the GradStudents table is returned.
 void CompleteStudentQuery(SQLHANDLE StmtHandle, SQLWCHAR* Query);
+
+//Pre: Memory has been allocated for a SQL statement handle and a query represented by a string of SQLWCHARs has been initialized.
+//Post: The result set for the Professors table is returned.
 void CompleteProfessorQuery(SQLHANDLE StmtHandle, SQLWCHAR* Query);
+
+//Pre: Memory has been allocated for a SQL statement handle and a query represented by a string of SQLWCHARs has been initialized.
+//Post: The result set for the Departments table is returned.
 void CompleteDepartmentQuery(SQLHANDLE StmtHandle, SQLWCHAR* Query);
+
+//Pre: Memory has been allocated for a SQL statement handle and a query represented by a string of SQLWCHARs has been initialized.
+//Post: The result set for the Projects table is returned.
 void CompleteProjectQuery(SQLHANDLE StmtHandle, SQLWCHAR* Query);
 
 struct StudentRecord
