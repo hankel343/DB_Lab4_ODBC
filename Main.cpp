@@ -10,19 +10,50 @@ using namespace std;
 #define SQL_RESULT_LEN 240
 #define SQL_MSG_LEN 1024
 #define ProgramCompleteWithErrors 1
+enum Tables { STUDENT, PROFESSOR, DEPARTMENT, PROJECT };
 
 void showSQLError(unsigned int handleType, const SQLHANDLE& handle);
 bool EnvConnIni(SQLHANDLE& EnvHandle, SQLHANDLE& ConnHandle);
 void FreeAndDisconnect(SQLHANDLE StmtHandle, SQLHANDLE ConnHandle);
 bool ConnectToServer(SQLHANDLE ConnHandle, SQLHANDLE& StmtHandle, SQLWCHAR* ConnStr, SQLWCHAR* RetConnStr);
-void CompleteQuery(SQLHANDLE StmtHandle, SQLWCHAR* Query);
 
-struct StudentData
+void DisplayTables();
+Tables ProcessTableSelection(char tableSelection);
+SQLWCHAR* ReadAndConvertQuery();
+
+void CompleteStudentQuery(SQLHANDLE StmtHandle, SQLWCHAR* Query);
+void CompleteProfessorQuery(SQLHANDLE StmtHandle, SQLWCHAR* Query);
+void CompleteDepartmentQuery(SQLHANDLE StmtHandle, SQLWCHAR* Query);
+void CompleteProjectQuery(SQLHANDLE StmtHandle, SQLWCHAR* Query);
+
+struct StudentRecord
 {
-	char* StudentID;
-	char* Name;
+	char* studentID;
+	char* name;
 	char* dob;
 	char* major;
+};
+
+struct ProfessorRecord {
+	char* professorID;
+	char* name;
+	char* rank;
+	char* dob;
+	char* specialty;
+};
+
+struct DepartmentRecord {
+	char* departmentID;
+	char* name;
+	char* main_office;
+};
+
+struct ProjectRecord {
+	char* projectID;
+	char* sponsor_name;
+	char* start_date;
+	char* end_date;
+	char* budget;
 };
 
 int main()
@@ -49,16 +80,50 @@ int main()
 		return ProgramCompleteWithErrors;
 	}
 
+	char tableSelection{ '0' };
 	do {
-		cout << "Enter your query (or type 'exit' to quit): ";
-		std::getline(std::cin, query);
-		sqlQuery = new SQLWCHAR[query.length()];
-		for (int i{ 0 }; i < query.length()+1; i++) { sqlQuery[i] = query[i]; }
+		SQLWCHAR* sqlQuery = { nullptr };
 
-		if (query != "exit") {
-			CompleteQuery(sqlStmtHandle, sqlQuery);
+		if (SQL_SUCCESS != SQLAllocHandle(SQL_HANDLE_STMT, sqlconnhandle, &sqlStmtHandle)) {//Allocate a new statement handle.
+			break;
 		}
-	} while (query != "exit");
+
+		DisplayTables();
+		cout << "Table number: ";
+		std::cin >> tableSelection;
+		std::cin.ignore(1, '\n'); //Clear buffer for getline use later.
+		if (tableSelection == 'q')
+			continue;
+
+		switch (ProcessTableSelection(tableSelection)) {
+
+			case STUDENT:
+				sqlQuery = ReadAndConvertQuery();
+				CompleteStudentQuery(sqlStmtHandle, sqlQuery);
+				break;
+
+			case PROFESSOR:
+				sqlQuery = ReadAndConvertQuery();
+				CompleteProfessorQuery(sqlStmtHandle, sqlQuery);
+				break;
+
+			case DEPARTMENT:
+				sqlQuery = ReadAndConvertQuery();
+				CompleteDepartmentQuery(sqlStmtHandle, sqlQuery);
+				break;
+
+			case PROJECT:
+				sqlQuery = ReadAndConvertQuery();
+				CompleteProjectQuery(sqlStmtHandle, sqlQuery);
+				break;
+			
+			default:
+				std::cerr << "\n\n=========================================================================\n";
+				std::cerr << "Unrecognized input " << "\"" << tableSelection << "\"" << " -- try again.\n";
+				std::cerr << "=========================================================================\n";
+		}
+		
+		} while (tableSelection != 'q');
 
 	FreeAndDisconnect(sqlStmtHandle, sqlconnhandle);
 	delete[] sqlConnStr, retconstring, sqlQuery;
@@ -71,8 +136,10 @@ void showSQLError(unsigned int handleType, const SQLHANDLE& handle)
 	SQLWCHAR* state = new SQLWCHAR[SQL_MSG_LEN];
 	SQLWCHAR* msg = new SQLWCHAR[SQL_MSG_LEN];
 
-	if (SQL_SUCCESS == SQLGetDiagRec(handleType, handle, 1, state, NULL, msg, SQL_MSG_LEN, NULL))
-		cout << "SQL Error message: " << *msg << "\nSQL state: " << *state << "." << endl;
+	if (SQL_SUCCESS == SQLGetDiagRec(handleType, handle, 1, state, NULL, msg, SQL_MSG_LEN, NULL)) {
+		cout << "SQL Error message: "; for (int i{ 0 }; i < SQL_MSG_LEN; i++) { cout << (SQLCHAR)msg[i]; }
+		cout << "\nSQL state: "; for (int i{ 0 }; i < SQL_MSG_LEN; i++) { cout << (SQLCHAR)state[i]; }
+	}
 	else
 		cout << "Error retrieving error information.\n";
 
@@ -96,7 +163,6 @@ bool EnvConnIni(SQLHANDLE& EnvHandle, SQLHANDLE& ConnHandle)
 void FreeAndDisconnect(SQLHANDLE StmtHandle, SQLHANDLE ConnHandle)
 {
 	SQLFreeHandle(SQL_HANDLE_STMT, StmtHandle);
-	SQLDisconnect(ConnHandle);
 	SQLFreeHandle(SQL_HANDLE_DBC, ConnHandle);
 	SQLFreeHandle(SQL_HANDLE_ENV, ConnHandle);
 
@@ -143,7 +209,46 @@ bool ConnectToServer(SQLHANDLE ConnHandle, SQLHANDLE& StmtHandle, SQLWCHAR* Conn
 	return false;
 }
 
-void CompleteQuery(SQLHANDLE StmtHandle, SQLWCHAR* Query)
+void DisplayTables() {
+	cout << "Enter the table you would like to perform operations on: \n";
+	cout << "1 - GradStudents (PK_sid, name, dob, degree_program)\n";
+	cout << "2 - Professors (PK_fid, name, rank, dob, specialty)\n";
+	cout << "3 - Departments (PK_did, name, main_office)\n";
+	cout << "4 - Projects (PK_pid, sponsor_name, start_date, end_date, budget)\n";
+	cout << "q - quit\n";
+}
+
+Tables ProcessTableSelection(char tableSelection) {
+	switch (tableSelection) {
+	case '1':
+		return STUDENT;
+
+	case '2':
+		return PROFESSOR;
+
+	case '3':
+		return DEPARTMENT;
+
+	case '4':
+		return PROJECT;
+	}
+}
+
+SQLWCHAR* ReadAndConvertQuery() {
+	std::string userInput{ "" };
+	SQLWCHAR* returnString = new SQLWCHAR[userInput.length()];
+
+	cout << "Enter your query: ";
+	std::getline(std::cin, userInput);
+
+	for (int i{ 0 }; i < userInput.length()+1; i++) {
+		returnString[i] = (SQLWCHAR)userInput[i];
+	}
+
+	return returnString;
+}
+
+void CompleteStudentQuery(SQLHANDLE StmtHandle, SQLWCHAR* Query)
 {
 	std::cout << "\nExecuting T-SQL query...\n";
 
@@ -195,30 +300,247 @@ void CompleteQuery(SQLHANDLE StmtHandle, SQLWCHAR* Query)
 
 	SQLCHAR data[SQL_RESULT_LEN];
 	SQLINTEGER ptrSqlData;
-	StudentData StuData;		// Here I am just using a single object, however you could use a vector to collect all of the data.
+	StudentRecord StudentData;
 
 	while (SQLFetch(StmtHandle) == SQL_SUCCESS)
 	{
 		SQLGetData(StmtHandle, 1, SQL_CHAR, data, SQL_RESULT_LEN, &ptrSqlData);
-		StuData.StudentID = (char*)data;
-		cout << "StudentID: " << StuData.StudentID << ", ";
+		StudentData.studentID = (char*)data;
+		cout << "StudentID: " << StudentData.studentID << ", ";
 
 		SQLGetData(StmtHandle, 2, SQL_CHAR, data, SQL_RESULT_LEN, &ptrSqlData);
-		StuData.Name = (char*)data;
-		cout << "Name: " << StuData.Name << ", ";
+		StudentData.name = (char*)data;
+		cout << "Name: " << StudentData.name << ", ";
 
 		SQLGetData(StmtHandle, 3, SQL_CHAR, data, SQL_RESULT_LEN, &ptrSqlData);
-		StuData.dob = (char*)data;
-		cout << "DOB: " << StuData.dob << ", ";
+		StudentData.dob = (char*)data;
+		cout << "DOB: " << StudentData.dob << ", ";
 
 		SQLGetData(StmtHandle, 4, SQL_CHAR, data, SQL_RESULT_LEN, &ptrSqlData);
-		StuData.major = (char*)data;
-		cout << "Major: " << StuData.major << endl;
-
-		// Etc...
+		StudentData.major = (char*)data;
+		cout << "Major: " << StudentData.major << endl;
 	}
 }
 
+void CompleteProfessorQuery(SQLHANDLE StmtHandle, SQLWCHAR* Query) {
+	std::cout << "\nExecuting T-SQL query...\n";
+
+	switch (SQLExecDirect(StmtHandle, Query, SQL_NTS))
+	{
+	case SQL_SUCCESS:
+		std::cout << "Success\n";
+		break;
+
+	case SQL_SUCCESS_WITH_INFO:
+		std::cout << "Success\n";
+		break;
+
+	case SQL_NEED_DATA:
+		std::cout << "Need data\n";
+		showSQLError(SQL_HANDLE_STMT, StmtHandle);
+		break;
+
+	case SQL_STILL_EXECUTING:
+		std::cout << "Still executing\n";
+		showSQLError(SQL_HANDLE_STMT, StmtHandle);
+		break;
+
+	case SQL_ERROR:
+		std::cout << "General error\n";
+		showSQLError(SQL_HANDLE_STMT, StmtHandle);
+		break;
+
+	case SQL_NO_DATA:
+		std::cout << "No data\n";
+		showSQLError(SQL_HANDLE_STMT, StmtHandle);
+		break;
+
+	case SQL_INVALID_HANDLE:
+		std::cout << "Invalid handle\n";
+		showSQLError(SQL_HANDLE_STMT, StmtHandle);
+		break;
+
+	case SQL_PARAM_DATA_AVAILABLE:
+		std::cout << "Param data available\n";
+		showSQLError(SQL_HANDLE_STMT, StmtHandle);
+		break;
+
+	default:
+		std::cout << "Default\n";
+		showSQLError(SQL_HANDLE_STMT, StmtHandle);
+		break;
+	}
+
+	SQLCHAR data[SQL_RESULT_LEN];
+	SQLINTEGER ptrSqlData;
+	ProfessorRecord ProfessorData;
+	while (SQLFetch(StmtHandle) == SQL_SUCCESS)
+	{
+		SQLGetData(StmtHandle, 1, SQL_CHAR, data, SQL_RESULT_LEN, &ptrSqlData);
+		ProfessorData.professorID = (char*)data;
+		cout << "StudentID: " << ProfessorData.professorID << ", ";
+
+		SQLGetData(StmtHandle, 2, SQL_CHAR, data, SQL_RESULT_LEN, &ptrSqlData);
+		ProfessorData.name = (char*)data;
+		cout << "Name: " << ProfessorData.name << ", ";
+
+		SQLGetData(StmtHandle, 3, SQL_CHAR, data, SQL_RESULT_LEN, &ptrSqlData);
+		ProfessorData.rank = (char*)data;
+		cout << "Rank: " << ProfessorData.rank;
+
+		SQLGetData(StmtHandle, 4, SQL_CHAR, data, SQL_RESULT_LEN, &ptrSqlData);
+		ProfessorData.dob = (char*)data;
+		cout << "DOB: " << ProfessorData.dob << ", ";
+
+		SQLGetData(StmtHandle, 5, SQL_CHAR, data, SQL_RESULT_LEN, &ptrSqlData);
+		ProfessorData.specialty = (char*)data;
+		cout << "Major: " << ProfessorData.specialty << endl;
+	}
+}
+
+void CompleteDepartmentQuery(SQLHANDLE StmtHandle, SQLWCHAR* Query) {
+	std::cout << "\nExecuting T-SQL query...\n";
+
+	switch (SQLExecDirect(StmtHandle, Query, SQL_NTS))
+	{
+	case SQL_SUCCESS:
+		std::cout << "Success\n";
+		break;
+
+	case SQL_SUCCESS_WITH_INFO:
+		std::cout << "Success\n";
+		break;
+
+	case SQL_NEED_DATA:
+		std::cout << "Need data\n";
+		showSQLError(SQL_HANDLE_STMT, StmtHandle);
+		break;
+
+	case SQL_STILL_EXECUTING:
+		std::cout << "Still executing\n";
+		showSQLError(SQL_HANDLE_STMT, StmtHandle);
+		break;
+
+	case SQL_ERROR:
+		std::cout << "General error\n";
+		showSQLError(SQL_HANDLE_STMT, StmtHandle);
+		break;
+
+	case SQL_NO_DATA:
+		std::cout << "No data\n";
+		showSQLError(SQL_HANDLE_STMT, StmtHandle);
+		break;
+
+	case SQL_INVALID_HANDLE:
+		std::cout << "Invalid handle\n";
+		showSQLError(SQL_HANDLE_STMT, StmtHandle);
+		break;
+
+	case SQL_PARAM_DATA_AVAILABLE:
+		std::cout << "Param data available\n";
+		showSQLError(SQL_HANDLE_STMT, StmtHandle);
+		break;
+
+	default:
+		std::cout << "Default\n";
+		showSQLError(SQL_HANDLE_STMT, StmtHandle);
+		break;
+	}
+
+	SQLCHAR data[SQL_RESULT_LEN];
+	SQLINTEGER ptrSqlData;
+	DepartmentRecord DepartmentData;
+	while (SQLFetch(StmtHandle) == SQL_SUCCESS)
+	{
+		SQLGetData(StmtHandle, 1, SQL_CHAR, data, SQL_RESULT_LEN, &ptrSqlData);
+		DepartmentData.departmentID = (char*)data;
+		cout << "StudentID: " << DepartmentData.departmentID << ", ";
+
+		SQLGetData(StmtHandle, 2, SQL_CHAR, data, SQL_RESULT_LEN, &ptrSqlData);
+		DepartmentData.name = (char*)data;
+		cout << "Name: " << DepartmentData.name << ", ";
+
+		SQLGetData(StmtHandle, 3, SQL_CHAR, data, SQL_RESULT_LEN, &ptrSqlData);
+		DepartmentData.main_office = (char*)data;
+		cout << "Rank: " << DepartmentData.main_office;
+	}
+}
+
+void CompleteProjectQuery(SQLHANDLE StmtHandle, SQLWCHAR* Query) {
+	std::cout << "\nExecuting T-SQL query...\n";
+
+	switch (SQLExecDirect(StmtHandle, Query, SQL_NTS))
+	{
+	case SQL_SUCCESS:
+		std::cout << "Success\n";
+		break;
+
+	case SQL_SUCCESS_WITH_INFO:
+		std::cout << "Success\n";
+		break;
+
+	case SQL_NEED_DATA:
+		std::cout << "Need data\n";
+		showSQLError(SQL_HANDLE_STMT, StmtHandle);
+		break;
+
+	case SQL_STILL_EXECUTING:
+		std::cout << "Still executing\n";
+		showSQLError(SQL_HANDLE_STMT, StmtHandle);
+		break;
+
+	case SQL_ERROR:
+		std::cout << "General error\n";
+		showSQLError(SQL_HANDLE_STMT, StmtHandle);
+		break;
+
+	case SQL_NO_DATA:
+		std::cout << "No data\n";
+		showSQLError(SQL_HANDLE_STMT, StmtHandle);
+		break;
+
+	case SQL_INVALID_HANDLE:
+		std::cout << "Invalid handle\n";
+		showSQLError(SQL_HANDLE_STMT, StmtHandle);
+		break;
+
+	case SQL_PARAM_DATA_AVAILABLE:
+		std::cout << "Param data available\n";
+		showSQLError(SQL_HANDLE_STMT, StmtHandle);
+		break;
+
+	default:
+		std::cout << "Default\n";
+		showSQLError(SQL_HANDLE_STMT, StmtHandle);
+		break;
+	}
+
+	SQLCHAR data[SQL_RESULT_LEN];
+	SQLINTEGER ptrSqlData;
+	ProjectRecord projectData;
+	while (SQLFetch(StmtHandle) == SQL_SUCCESS)
+	{
+		SQLGetData(StmtHandle, 1, SQL_CHAR, data, SQL_RESULT_LEN, &ptrSqlData);
+		projectData.projectID = (char*)data;
+		cout << "StudentID: " << projectData.projectID << ", ";
+
+		SQLGetData(StmtHandle, 2, SQL_CHAR, data, SQL_RESULT_LEN, &ptrSqlData);
+		projectData.sponsor_name = (char*)data;
+		cout << "Name: " << projectData.sponsor_name << ", ";
+
+		SQLGetData(StmtHandle, 3, SQL_CHAR, data, SQL_RESULT_LEN, &ptrSqlData);
+		projectData.start_date = (char*)data;
+		cout << "Rank: " << projectData.start_date;
+
+		SQLGetData(StmtHandle, 4, SQL_CHAR, data, SQL_RESULT_LEN, &ptrSqlData);
+		projectData.end_date = (char*)data;
+		cout << "Rank: " << projectData.end_date;
+
+		SQLGetData(StmtHandle, 5, SQL_CHAR, data, SQL_RESULT_LEN, &ptrSqlData);
+		projectData.budget = (char*)data;
+		cout << "Rank: " << projectData.budget;
+	}
+}
 // Example query of SQL version, this would need to be modified to fit current code construct.
 /*if (SQL_SUCCESS != SQLExecDirect(sqlStmtHandle, (SQLCHAR*)"SELECT @@VERSION", SQL_NTS))
 {
