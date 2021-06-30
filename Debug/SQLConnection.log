@@ -1,5 +1,5 @@
 ﻿  Main.cpp
-C:\Users\hanke\Documents\VS_Projects\Databases\SQLConnection\SQLConnection\Main.cpp(67,21): warning C4018: '<': signed/unsigned mismatch
-C:\Users\hanke\Documents\VS_Projects\Databases\SQLConnection\SQLConnection\Main.cpp(244,21): warning C4018: '<': signed/unsigned mismatch
-C:\Users\hanke\Documents\VS_Projects\Databases\SQLConnection\SQLConnection\Main.cpp(235): warning C4715: 'ProcessTableSelection': not all control paths return a value
+C:\Users\hanke\Documents\VS_Projects\Databases\SQLConnection\SQLConnection\Main.cpp(103,21): warning C4018: '<': signed/unsigned mismatch
+C:\Users\hanke\Documents\VS_Projects\Databases\SQLConnection\SQLConnection\Main.cpp(281,21): warning C4018: '<': signed/unsigned mismatch
+C:\Users\hanke\Documents\VS_Projects\Databases\SQLConnection\SQLConnection\Main.cpp(271): warning C4715: 'ProcessTableSelection': not all control paths return a value
   SQLConnection.vcxproj -> C:\Users\hanke\Documents\VS_Projects\Databases\SQLConnection\Debug\SQLConnection.exe

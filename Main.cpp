@@ -94,9 +94,9 @@ struct ProjectRecord {
 
 int main()
 {
-	SQLHANDLE sqlconnhandle = NULL;	// Connection handle
-	SQLHANDLE sqlStmtHandle = NULL;	// Statement handle
-	SQLHANDLE sqlEnvHandle = NULL;		// Environment handle
+	SQLHANDLE sqlconnhandle{ nullptr };	// Connection handle
+	SQLHANDLE sqlStmtHandle{ nullptr };	// Statement handle
+	SQLHANDLE sqlEnvHandle{ nullptr };		// Environment handle
 	std::string connStr = "Driver={SQL Server};SERVER=localhost, 1433, DATABASE=Lab3;Trusted=true;";
 	std::string query{ "" };
 	SQLWCHAR* sqlConnStr = new SQLWCHAR[connStr.length()];
@@ -125,7 +125,6 @@ int main()
 		}
 
 		DisplayTables();
-		cout << "Table number: ";
 		std::cin >> tableSelection;
 		std::cin.ignore(1, '\n'); //Clear buffer for getline use later.
 		if (tableSelection == 'q')
@@ -252,6 +251,7 @@ void DisplayTables() {
 	cout << "3 - Departments (PK_did, name, main_office)\n";
 	cout << "4 - Projects (PK_pid, sponsor_name, start_date, end_date, budget)\n";
 	cout << "q - quit\n";
+	cout << "Table number: ";
 }
 
 Tables ProcessTableSelection(char tableSelection) {
@@ -274,6 +274,7 @@ SQLWCHAR* ReadAndConvertQuery() {
 	std::string userInput{ "" };
 	SQLWCHAR* returnString = new SQLWCHAR[userInput.length()];
 
+	cout << "\nNote: Queries to the database should be in the following form: \"select [table] from Lab3.dbo.[table name]\"\n";
 	cout << "Enter your query: ";
 	std::getline(std::cin, userInput);
 
@@ -356,6 +357,7 @@ void CompleteStudentQuery(SQLHANDLE StmtHandle, SQLWCHAR* Query)
 		StudentData.major = (char*)data;
 		cout << "Major: " << StudentData.major << endl;
 	}
+	cout << endl << endl;
 }
 
 void CompleteProfessorQuery(SQLHANDLE StmtHandle, SQLWCHAR* Query) {
@@ -432,6 +434,7 @@ void CompleteProfessorQuery(SQLHANDLE StmtHandle, SQLWCHAR* Query) {
 		ProfessorData.specialty = (char*)data;
 		cout << "Major: " << ProfessorData.specialty << endl;
 	}
+	cout << endl << endl;
 }
 
 void CompleteDepartmentQuery(SQLHANDLE StmtHandle, SQLWCHAR* Query) {
@@ -500,6 +503,7 @@ void CompleteDepartmentQuery(SQLHANDLE StmtHandle, SQLWCHAR* Query) {
 		DepartmentData.main_office = (char*)data;
 		cout << "Rank: " << DepartmentData.main_office;
 	}
+	cout << endl << endl;
 }
 
 void CompleteProjectQuery(SQLHANDLE StmtHandle, SQLWCHAR* Query) {
@@ -576,6 +580,7 @@ void CompleteProjectQuery(SQLHANDLE StmtHandle, SQLWCHAR* Query) {
 		projectData.budget = (char*)data;
 		cout << "Rank: " << projectData.budget;
 	}
+	cout << endl << endl;
 }
 // Example query of SQL version, this would need to be modified to fit current code construct.
 /*if (SQL_SUCCESS != SQLExecDirect(sqlStmtHandle, (SQLCHAR*)"SELECT @@VERSION", SQL_NTS))
